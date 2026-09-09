@@ -1,0 +1,98 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: claude-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    # Skip edits made by bots (e.g. Claude's own comments/labels don't trigger
+    # `edited`, but this guards against other automations), and skip issues
+    # that already mention @claude — those are handled by claude.yml instead,
+    # so we don't run both workflows on the same event.
+    if: |
+      github.event.sender.type != 'Bot' &&
+      !contains(github.event.issue.body, '@claude') &&
+      !contains(github.event.issue.title, '@claude')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Issue Triage
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # Keep one running comment per issue instead of stacking a new one
+          # every time the issue is edited.
+          track_progress: true
+          use_sticky_comment: true
+
+          prompt: |
+            Analiza el issue #${{ github.event.issue.number }} de este repositorio
+            (un clon de Tetris en JavaScript vanilla, HTML5 Canvas y CSS, sin
+            dependencias ni build).
+
+            Sigue estos pasos:
+
+            1. Lee el issue completo con `gh issue view ${{ github.event.issue.number }}`.
+            2. Explora el repositorio (README.md, CLAUDE.md, game.js, index.html,
+               style.css) para entender la arquitectura del juego antes de opinar.
+               CLAUDE.md documenta el modelo de tablero, las colisiones, el bucle
+               de juego y las convenciones del proyecto — úsalo como referencia.
+            3. Ejecuta `gh label list` y elige EXCLUSIVAMENTE etiquetas de esa
+               lista existente para clasificar el issue (por ejemplo: bug,
+               enhancement, accessibility, documentation, question,
+               "good first issue", "help wanted", duplicate, invalid, wontfix).
+               No crees etiquetas nuevas bajo ningún concepto. Si ninguna
+               etiqueta existente encaja bien, no apliques ninguna y dilo
+               explícitamente en el diagnóstico. Aplica las etiquetas elegidas
+               con `gh issue edit ${{ github.event.issue.number }} --add-label "..."`.
+            4. Escribe un diagnóstico estructurado, en español, y publícalo
+               actualizando el comentario de seguimiento (no crees comentarios
+               sueltos con `gh issue comment`). El diagnóstico debe tener
+               exactamente estas secciones:
+
+               ## Resumen
+               1-2 frases sobre qué pide el issue realmente.
+
+               ## Etiquetas aplicadas
+               Qué etiquetas se aplicaron y por qué (o por qué ninguna encaja).
+
+               ## Archivos afectados
+               Rutas concretas y funciones/símbolos del código implicados.
+
+               ## Análisis
+               Causa raíz del problema, o por qué falta la funcionalidad pedida.
+
+               ## Propuesta de solución
+               Pasos numerados y concretos para implementarla.
+
+               ## Criterios de aceptación
+               Lista verificable manualmente en el navegador (no hay tests
+               automatizados en este proyecto).
+
+               ## Riesgos y dudas
+               Qué falta por aclarar. Si el issue es ambiguo, formula aquí las
+               preguntas para el autor.
+
+               Termina el comentario con esta línea exacta:
+               "Para implementar esta solución, comenta `@claude implementa la
+               solución propuesta en el diagnóstico` en este issue."
+
+          claude_args: |
+            --allowedTools "Read,Glob,Grep,mcp__github_comment__update_claude_comment,Bash(gh label list:*),Bash(gh issue view:*),Bash(gh issue edit:*)"
