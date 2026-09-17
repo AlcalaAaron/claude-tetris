@@ -168,6 +168,33 @@ body {
   color: var(--controls-text);
 }
 
+/* ---- Selector de skin ---- */
+.skin-select-section {
+  gap: 6px;
+}
+
+.skin-select {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  color: var(--text);
+  font-size: 12px;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ---- Skins visuales ---- */
+[data-skin='neon'] {
+  --board-bg: #000000;
+  --grid-line: #1a1a1a;
+}
+
+[data-skin='pastel'] {
+  --board-bg: #fdf6ee;
+  --grid-line: #ecdfd2;
+}
+
 /* ---- Controles ---- */
 .controls ul {
   list-style: none;
