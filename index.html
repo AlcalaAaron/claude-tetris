@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
   <link rel="stylesheet" href="style.css" />
+  <script>
+    (function () {
+      var saved = localStorage.getItem('theme');
+      if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    })();
+  </script>
 </head>
 <body>
   <div class="wrapper">
@@ -13,6 +19,14 @@
       <canvas id="board" width="300" height="600"></canvas>
 
       <aside class="panel">
+        <div class="panel-section theme-switch">
+          <label class="theme-switch-toggle">
+            <input type="checkbox" id="theme-toggle" />
+            <span class="theme-switch-slider"></span>
+          </label>
+          <span class="theme-switch-label" id="theme-toggle-label">Modo oscuro</span>
+        </div>
+
         <div class="panel-section">
           <span class="label">SCORE</span>
           <span class="value" id="score">0</span>
