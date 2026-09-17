@@ -47,12 +47,12 @@
 
         <div class="panel-section controls">
           <span class="label">CONTROLS</span>
-          <ul>
+          <ul id="controls-list">
             <li><kbd>←</kbd><kbd>→</kbd> mover</li>
             <li><kbd>↑</kbd> rotar</li>
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
           </ul>
         </div>
       </aside>
@@ -76,13 +76,7 @@
           <button id="toggle-controls-btn">Ver controles</button>
         </div>
 
-        <ul id="pause-controls-list" class="controls-list hidden">
-          <li><kbd>←</kbd><kbd>→</kbd> mover</li>
-          <li><kbd>↑</kbd> rotar</li>
-          <li><kbd>↓</kbd> bajar</li>
-          <li><kbd>Space</kbd> caída</li>
-          <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
-        </ul>
+        <ul id="pause-controls-list" class="controls-list hidden"></ul>
 
         <div class="pause-menu-level">
           <label for="start-level-select">Nivel inicial</label>

@@ -46,7 +46,12 @@ const resumeBtn = document.getElementById('resume-btn');
 const pauseRestartBtn = document.getElementById('pause-restart-btn');
 const toggleControlsBtn = document.getElementById('toggle-controls-btn');
 const pauseControlsList = document.getElementById('pause-controls-list');
+const controlsList = document.getElementById('controls-list');
 const startLevelSelect = document.getElementById('start-level-select');
+
+// Mirror the sidebar's control legend into the pause menu instead of
+// duplicating the markup, so the two never drift out of sync.
+pauseControlsList.innerHTML = controlsList.innerHTML;
 
 const START_LEVEL_KEY = 'tetris-start-level';
 
@@ -361,16 +366,20 @@ function init() {
 const GAME_KEY_CODES = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'];
 
 document.addEventListener('keydown', e => {
+  const tag = e.target && e.target.tagName;
   if (e.code === 'KeyP' || e.code === 'Escape') {
+    // If a <select> (e.g. the start-level dropdown) has its native options
+    // list open, Escape should just close that dropdown, not resume the game.
+    if (e.code === 'Escape' && tag === 'SELECT') return;
     if (!gameOver) togglePause();
     return;
   }
   if (paused || gameOver) {
-    const tag = e.target && e.target.tagName;
-    // Let a focused <select> use arrows to change its value, and a focused
-    // <button> use Space to activate itself — everything else is inert.
+    // Let a focused <select> use arrows/Space to work natively (change value
+    // or open its options list), and a focused <button> use Space to
+    // activate itself — everything else is inert.
     const allowNativeBehavior =
-      (tag === 'SELECT' && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) ||
+      (tag === 'SELECT' && (e.code === 'ArrowUp' || e.code === 'ArrowDown' || e.code === 'Space')) ||
       (tag === 'BUTTON' && e.code === 'Space');
     if (!allowNativeBehavior && GAME_KEY_CODES.includes(e.code)) {
       e.preventDefault();
