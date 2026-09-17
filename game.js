@@ -41,9 +41,32 @@ const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggle = document.getElementById('theme-toggle');
 const themeToggleLabel = document.getElementById('theme-toggle-label');
+const pauseMenu = document.getElementById('pause-menu');
+const resumeBtn = document.getElementById('resume-btn');
+const pauseRestartBtn = document.getElementById('pause-restart-btn');
+const toggleControlsBtn = document.getElementById('toggle-controls-btn');
+const pauseControlsList = document.getElementById('pause-controls-list');
+const controlsList = document.getElementById('controls-list');
+const startLevelSelect = document.getElementById('start-level-select');
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+// Mirror the sidebar's control legend into the pause menu instead of
+// duplicating the markup, so the two never drift out of sync.
+pauseControlsList.innerHTML = controlsList.innerHTML;
+
+const START_LEVEL_KEY = 'tetris-start-level';
+
+let board, current, next, score, lines, level, startLevel, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let gridColor;
+
+function readStartLevel() {
+  const stored = parseInt(localStorage.getItem(START_LEVEL_KEY), 10);
+  if (Number.isFinite(stored) && stored >= 1 && stored <= 10) return stored;
+  return 1;
+}
+
+function levelToDropInterval(lvl) {
+  return Math.max(100, 1000 - (lvl - 1) * 90);
+}
 
 function readGridColor() {
   gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid-line').trim();
@@ -136,8 +159,8 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    level = startLevel + Math.floor(lines / 10);
+    dropInterval = levelToDropInterval(level);
     updateHUD();
   }
 }
@@ -261,19 +284,46 @@ function endGame() {
   overlay.classList.remove('hidden');
 }
 
+function openPauseMenu() {
+  cancelAnimationFrame(animId);
+  pauseMenu.classList.remove('hidden');
+}
+
+function closePauseMenu() {
+  pauseMenu.classList.add('hidden');
+}
+
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    closePauseMenu();
     lastTime = performance.now();
     loop(lastTime);
   } else {
-    cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    openPauseMenu();
   }
 }
+
+resumeBtn.addEventListener('click', () => {
+  if (paused) togglePause();
+});
+
+pauseRestartBtn.addEventListener('click', () => {
+  closePauseMenu();
+  init();
+});
+
+toggleControlsBtn.addEventListener('click', () => {
+  pauseControlsList.classList.toggle('hidden');
+});
+
+startLevelSelect.addEventListener('change', () => {
+  const value = parseInt(startLevelSelect.value, 10);
+  if (Number.isFinite(value) && value >= 1 && value <= 10) {
+    localStorage.setItem(START_LEVEL_KEY, String(value));
+  }
+});
 
 function loop(ts) {
   const dt = ts - lastTime;
@@ -296,23 +346,46 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  startLevel = readStartLevel();
+  level = startLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = levelToDropInterval(level);
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  closePauseMenu();
+  startLevelSelect.value = String(startLevel);
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
+const GAME_KEY_CODES = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'];
+
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  const tag = e.target && e.target.tagName;
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    // If a <select> (e.g. the start-level dropdown) has its native options
+    // list open, Escape should just close that dropdown, not resume the game.
+    if (e.code === 'Escape' && tag === 'SELECT') return;
+    if (!gameOver) togglePause();
+    return;
+  }
+  if (paused || gameOver) {
+    // Let a focused <select> use arrows/Space to work natively (change value
+    // or open its options list), and a focused <button> use Space to
+    // activate itself — everything else is inert.
+    const allowNativeBehavior =
+      (tag === 'SELECT' && (e.code === 'ArrowUp' || e.code === 'ArrowDown' || e.code === 'Space')) ||
+      (tag === 'BUTTON' && e.code === 'Space');
+    if (!allowNativeBehavior && GAME_KEY_CODES.includes(e.code)) {
+      e.preventDefault();
+    }
+    return;
+  }
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
